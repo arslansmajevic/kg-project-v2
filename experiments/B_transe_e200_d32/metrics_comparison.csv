@@ -1,0 +1,2 @@
+model,evaluation_split,epochs,embedding_dim,model_seed,learning_rate,batch_size,evaluation_filtered_MRR,evaluation_filtered_Hits@1,evaluation_filtered_Hits@3,evaluation_filtered_Hits@10,evaluation_filtered_mean_rank,technique_tail_test_triples,technique_tail_type_constrained_MRR,technique_tail_type_constrained_Hits@1,technique_tail_type_constrained_Hits@3
+TransE,validation,200,32,42,0.01,256,0.36106500029563904,0.23170731707317074,0.4186991869918699,0.6016260162601627,20.760162353515625,20,0.9750000834465027,0.95,1.0

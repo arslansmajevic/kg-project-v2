@@ -1,0 +1,18 @@
+{
+  "total_triples": 1232,
+  "entities": 245,
+  "relations": 9,
+  "training_triples": 985,
+  "validation_triples": 123,
+  "testing_triples": 124,
+  "split_seed": 42,
+  "model_seed": 42,
+  "models": [
+    "TransE"
+  ],
+  "epochs": 80,
+  "embedding_dim": 64,
+  "learning_rate": 0.01,
+  "batch_size": 256,
+  "evaluation_split": "validation"
+}
