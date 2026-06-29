@@ -17,7 +17,7 @@
 This project asks whether a compact hybrid knowledge graph, built from synthetic enterprise-security facts and transparent rule-derived hypotheses, can support link prediction for missing \texttt{process -> suggests\_technique -> ATT\&CK-like technique} triples. In practical terms, the goal is not to build an operational APT detector, but to test whether a Knowledge Graph Embedding (KGE) model can recover structured technique links that were deliberately hidden during evaluation.
 
 \section{Project Scope and Learning Outcomes}
-The work mainly addresses Knowledge Graph Embeddings, simple logical knowledge, KG data modelling, KG architecture, approximate reasoning, KG creation, KG evolution and KG-based services. It also connects these areas to ML and AI more generally. Graph Neural Networks and financial Knowledge Graph applications are not implemented directly, but they are discussed as realistic extensions.
+The work mainly addresses Knowledge Graph Embeddings, simple logical knowledge, KG data modelling, KG architecture, approximate reasoning, KG creation, KG evolution, and KG-based services. It also connects these areas to ML and AI more generally. Graph Neural Networks and financial Knowledge Graph applications are not implemented directly, but they are discussed as realistic extensions.
 
 The most important learning-outcome connection is the hybrid design: the symbolic rule layer creates explainable \texttt{suggests\_technique} and provenance facts, while the embedding layer learns continuous vector representations and ranks missing links. This makes the project a small example of the broader KG idea that logical, database-style and ML-based representations can be combined in one architecture.
 
@@ -132,7 +132,7 @@ To check whether the result depended heavily on one random model seed, the same 
 \caption{Test robustness check across three model seeds for TransE with 80 epochs and dimension 32.}
 \end{table}
 
-The three test MRR values were 0.256, 0.240 and 0.296, with a mean of about 0.264 and standard deviation of about 0.029. This indicates moderate stability: the model learns a similar pattern across seeds, but the exact ranking quality still changes. This is expected for neural embedding models because random initialisation and stochastic optimisation can affect the final embedding space.
+The three test MRR values were 0.256, 0.240 and 0.296, with a mean of about 0.264 and standard deviation of about 0.029. This indicates moderate stability: the model learns a similar pattern across seeds, but the exact ranking quality still changes. This is expected for neural embedding models because random initialization and stochastic optimisation can affect the final embedding space.
 
 \section{Interpretation of the Findings}
 \subsection{Why TransE Worked Better Here}
