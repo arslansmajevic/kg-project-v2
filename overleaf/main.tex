@@ -14,86 +14,187 @@
 \maketitle
 
 \section{Research Question}
-Can a compact hybrid knowledge graph, consisting of observed security-event facts and rule-derived technique hypotheses, support link prediction of missing \texttt{process -> suggests\_technique -> ATT\&CK-like technique} triples?
+This project asks whether a compact hybrid knowledge graph, built from synthetic enterprise-security facts and transparent rule-derived hypotheses, can support link prediction for missing \texttt{process -> suggests\_technique -> ATT\&CK-like technique} triples. In practical terms, the goal is not to build an operational APT detector, but to test whether a Knowledge Graph Embedding (KGE) model can recover structured technique links that were deliberately hidden during evaluation.
+
+\section{Project Scope and Learning Outcomes}
+The work mainly addresses Knowledge Graph Embeddings, simple logical knowledge, KG data modelling, KG architecture, approximate reasoning, KG creation, KG evolution and KG-based services. It also connects these areas to ML and AI more generally. Graph Neural Networks and financial Knowledge Graph applications are not implemented directly, but they are discussed as realistic extensions.
+
+The most important learning-outcome connection is the hybrid design: the symbolic rule layer creates explainable \texttt{suggests\_technique} and provenance facts, while the embedding layer learns continuous vector representations and ranks missing links. This makes the project a small example of the broader KG idea that logical, database-style and ML-based representations can be combined in one architecture.
 
 \section{Data and Method}
 \subsection{Data Statement}
-We constructed a deterministic synthetic enterprise-security knowledge graph with 1,232 labelled triples, 245 entities and 9 relations. The observed-style component contains 944 triples representing pseudonymous users, workstations, servers, processes, file kinds and asset roles. A transparent rule layer derives 288 additional facts. For four synthetic process families, the rule maps a \texttt{has\_family} observation to an ATT\&CK-inspired \texttt{suggests\_technique} hypothesis and stores a provenance relation. The graph labels are semantically grounded in MITRE ATT\&CK technique identifiers, but the events and labels are generated locally rather than collected from real incidents.
+The dataset is a deterministic synthetic enterprise-security knowledge graph with 1,232 labelled triples, 245 entities and 9 relations. The observed-style component contains 944 triples representing pseudonymous users, workstations, servers, processes, file kinds and asset roles. A transparent rule layer derives 288 additional facts. For four synthetic process families, the rule maps a \texttt{has\_family} observation to an ATT\&CK-inspired \texttt{suggests\_technique} hypothesis and stores a provenance relation.
 
-\subsection{Method}
-We modelled a synthetic enterprise-security knowledge graph as labelled triples. The graph contains users, workstations, servers, processes, files, process families, security roles and ATT\&CK-like techniques. Observed facts include \texttt{authenticates\_to}, \texttt{runs}, \texttt{executed\_by}, \texttt{has\_family}, \texttt{accesses}, \texttt{connects\_to}, and \texttt{has\_role}. A deterministic Datalog-style rule derives \texttt{suggests\_technique} triples from process-family evidence and adds a provenance fact. We randomly split triples 80/10/10 into training, validation and testing sets using seed 42. We trained TransE and ComplEx with a 32-dimensional embedding, Adam optimisation (learning rate 0.01) and 80 epochs. We assessed filtered link prediction using MRR, Hits@1, Hits@3, Hits@10 and mean rank.
+The graph labels are semantically grounded in MITRE ATT\&CK technique identifiers, but the events and labels are generated locally rather than collected from real incidents. Therefore, the results measure link-prediction behaviour on a controlled teaching graph, not real-world attack-detection performance.
+
+\subsection{Graph Construction}
+The graph contains users, workstations, servers, processes, file kinds, process families, security roles and ATT\&CK-like technique nodes. Observed facts include \texttt{authenticates\_to}, \texttt{runs}, \texttt{executed\_by}, \texttt{has\_family}, \texttt{accesses}, \texttt{connects\_to} and \texttt{has\_role}. A deterministic Datalog-style rule derives \texttt{suggests\_technique} triples from process-family evidence:
+
+\begin{quote}
+\texttt{has\_family(Process, Family)} and \texttt{family\_maps\_to\_technique(Family, Technique)} imply \texttt{suggests\_technique(Process, Technique)}.
+\end{quote}
+
+For each derived technique suggestion, the pipeline also stores a provenance fact. This is important because it separates the symbolic reason for a suggested technique from the learned KGE ranking.
+
+\subsection{Models and Evaluation}
+Triples were randomly split 80/10/10 into training, validation and test sets using split seed 42. The main models were TransE and ComplEx, trained with PyKEEN using Adam optimisation, learning rate 0.01 and batch size 256. The main metrics are filtered mean reciprocal rank (MRR), Hits@1, Hits@3, Hits@10 and mean rank.
+
+Filtered MRR measures how highly the model ranks a held-out true triple when candidate corruptions are generated. Higher MRR and Hits@k are better; lower mean rank is better. These metrics are not alert precision, incident recall or calibrated probabilities of compromise. The project also reports an application-aligned \texttt{technique\_tail\_type\_constrained} metric that only ranks candidate ATT\&CK-like technique tails for \texttt{suggests\_technique}; this is easier than global link prediction because the candidate set is restricted.
 
 \section{Results}
-\subsection{Model Comparison}
-The following table shows the validation set performance for TransE and ComplEx trained under identical conditions (80 epochs, dimension 32).
+\subsection{Run A: Fair Model Comparison}
+The first planned comparison used the same split, epoch count, embedding dimension, optimiser and random seed for TransE and ComplEx. This makes the comparison fair within the limits of the small dataset and fixed training budget.
 
 \begin{table}[h]
 \centering
 \begin{tabular}{lrrrrr}
 \toprule
-\textbf{Model} & \textbf{Filtered MRR} & \textbf{Hits@1} & \textbf{Hits@3} & \textbf{Hits@10} & \textbf{Mean Rank} \\
+\textbf{Model} & \textbf{MRR} & \textbf{Hits@1} & \textbf{Hits@3} & \textbf{Hits@10} & \textbf{Mean Rank} \\
 \midrule
 TransE & 0.244 & 0.110 & 0.301 & 0.524 & 32.00 \\
 ComplEx & 0.027 & 0.004 & 0.008 & 0.041 & 100.81 \\
 \bottomrule
 \end{tabular}
-\caption{Validation link prediction metrics for TransE and ComplEx}
+\caption{Validation results for TransE and ComplEx, both trained for 80 epochs with dimension 32.}
 \end{table}
 
-\subsection{Final Test Evaluation (TransE)}
-The best performing model on the validation set, TransE, was evaluated on the test set:
-\begin{itemize}
-    \item \textbf{Filtered MRR:} 0.240
-    \item \textbf{Hits@1:} 0.101
-    \item \textbf{Hits@3:} 0.286
-    \item \textbf{Hits@10:} 0.532
-    \item \textbf{Mean Rank:} 30.74
-\end{itemize}
+TransE clearly outperformed ComplEx under these conditions. The result should be read as a finding about this graph and this training setup, not as a universal statement that TransE is always better than ComplEx. A likely explanation is that the synthetic rules create relatively simple translational patterns: processes from the same family tend to point to the same technique. TransE is designed to model relations as vector translations, so it can fit this kind of regular pattern efficiently. ComplEx is more expressive, especially for asymmetric and more complex relational structures, but that extra expressiveness did not help here under the same 80-epoch budget.
 
-A stability check across three random seeds (7, 42, 1337) yielded test MRR values of 0.256, 0.240, and 0.296, indicating stable learning with a mean MRR of approximately 0.264 (SD = 0.029).
+\subsection{Run B: Training-Duration Sensitivity}
+The second set of runs kept the selected model, split seed, model seed and embedding dimension fixed, while changing the number of training epochs.
 
-\section{Interpretation}
-TransE had a considerably higher filtered MRR (0.244) than ComplEx (0.027) on this dataset and training budget. 
-The best model (TransE) is moderately effective at placing held-out true links near the top of the candidate list, as shown by its Hits@10 of 0.524, meaning that over half of the time the true missing link was in the top 10 candidates.
-The global filtered MRR measures the model's ability to rank withheld true triples among candidate entity replacements across the whole graph. It is not alert precision, attack recall or a calibrated likelihood of compromise.
+\begin{table}[h]
+\centering
+\begin{tabular}{rrrrrr}
+\toprule
+\textbf{Epochs} & \textbf{MRR} & \textbf{Hits@1} & \textbf{Hits@3} & \textbf{Hits@10} & \textbf{Mean Rank} \\
+\midrule
+20 & 0.159 & 0.041 & 0.195 & 0.390 & 52.14 \\
+80 & 0.244 & 0.110 & 0.301 & 0.524 & 32.00 \\
+200 & 0.361 & 0.232 & 0.419 & 0.602 & 20.76 \\
+\bottomrule
+\end{tabular}
+\caption{Validation results for TransE with dimension 32 and different epoch counts.}
+\end{table}
+
+The validation results improved as the training budget increased from 20 to 80 to 200 epochs. This suggests that the 20-epoch model was under-trained and that the 80-epoch model had not fully converged. The stronger 200-epoch score means that, if the report is finalized strictly from validation selection, a final test run for the 200-epoch configuration would be the most consistent next step. The existing final test result for 80 epochs is still useful as a baseline, but it should not be described as the best possible TransE configuration after seeing the later validation runs.
+
+\subsection{Run C: Embedding-Dimension Sensitivity}
+The third set of runs kept TransE and 80 epochs fixed, while changing the embedding dimension.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{rrrrrr}
+\toprule
+\textbf{Dimension} & \textbf{MRR} & \textbf{Hits@1} & \textbf{Hits@3} & \textbf{Hits@10} & \textbf{Mean Rank} \\
+\midrule
+16 & 0.299 & 0.179 & 0.333 & 0.549 & 26.16 \\
+32 & 0.244 & 0.110 & 0.301 & 0.524 & 32.00 \\
+64 & 0.213 & 0.057 & 0.305 & 0.528 & 32.31 \\
+\bottomrule
+\end{tabular}
+\caption{Validation results for TransE trained for 80 epochs with different embedding dimensions.}
+\end{table}
+
+The 16-dimensional model had the best global validation MRR in this group, even though the 64-dimensional model had the highest type-constrained technique-tail MRR. This is plausible because the graph is small and deliberately regular. A larger embedding dimension gives the model more capacity, but more capacity is not automatically better when the dataset is small. It may require more training, stronger regularisation or more data. The result also shows why global and task-specific metrics should be interpreted separately: the global metric evaluates ranking across the whole graph, while the technique-tail metric focuses only on one analyst-style query.
+
+\subsection{Run D: Final Test Evaluation}
+The available final test run evaluates TransE with 80 epochs and dimension 32.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Model} & \textbf{MRR} & \textbf{Hits@1} & \textbf{Hits@3} & \textbf{Hits@10} & \textbf{Mean Rank} \\
+\midrule
+TransE & 0.240 & 0.101 & 0.286 & 0.532 & 30.74 \\
+\bottomrule
+\end{tabular}
+\caption{Final test result for the available TransE 80-epoch, 32-dimensional configuration.}
+\end{table}
+
+The test MRR of 0.240 is close to the validation MRR of 0.244 for the same configuration. This is a positive sign because it suggests that the validation estimate was not wildly optimistic for this baseline. Hits@10 of 0.532 means that the true held-out triple was ranked in the top 10 candidates in just over half of the evaluated cases. This is meaningful for a feasibility study, but it is not sufficient for an operational security system because analysts would still need calibrated scores, real labels, temporal evaluation and false-positive analysis.
+
+\subsection{Run E: Seed Robustness}
+To check whether the result depended heavily on one random model seed, the same TransE 80-epoch, 32-dimensional test configuration was run with three model seeds.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{rrrrrr}
+\toprule
+\textbf{Seed} & \textbf{MRR} & \textbf{Hits@1} & \textbf{Hits@3} & \textbf{Hits@10} & \textbf{Mean Rank} \\
+\midrule
+7 & 0.256 & 0.097 & 0.347 & 0.577 & 25.10 \\
+42 & 0.240 & 0.101 & 0.286 & 0.532 & 30.74 \\
+1337 & 0.296 & 0.177 & 0.327 & 0.556 & 29.27 \\
+\bottomrule
+\end{tabular}
+\caption{Test robustness check across three model seeds for TransE with 80 epochs and dimension 32.}
+\end{table}
+
+The three test MRR values were 0.256, 0.240 and 0.296, with a mean of about 0.264 and standard deviation of about 0.029. This indicates moderate stability: the model learns a similar pattern across seeds, but the exact ranking quality still changes. This is expected for neural embedding models because random initialisation and stochastic optimisation can affect the final embedding space.
+
+\section{Interpretation of the Findings}
+\subsection{Why TransE Worked Better Here}
+TransE is a good match for the dataset because many target facts follow simple repeated patterns. For example, a process family maps to one technique, and many processes share the same family. A translation-based model can represent this by moving process embeddings in a consistent relation-specific direction toward technique embeddings. In contrast, ComplEx can represent richer relational patterns, but this small graph may not provide enough diverse evidence for that extra capacity to be useful within the same training budget.
+
+\subsection{Why More Epochs Helped}
+The epoch sensitivity run shows a clear improvement from 20 to 200 epochs. This suggests that the model benefits from additional optimisation time. Since the graph is small, the model can keep refining entity and relation embeddings without immediately showing a validation decline in these runs. However, more epochs should not be increased indefinitely without monitoring validation metrics, because overfitting is still possible.
+
+\subsection{Why Larger Embeddings Did Not Automatically Help}
+The dimension sensitivity results show that more vector dimensions are not automatically better. The 16-dimensional model achieved stronger global validation MRR than the 32- and 64-dimensional versions at 80 epochs. One explanation is that the graph has a simple structure, so a compact embedding is enough to capture the main pattern. A larger embedding may spread information over more parameters, require more training, or fit noise in the random split.
+
+\subsection{Why the Technique-Tail Metric Looks Stronger}
+The type-constrained technique-tail metric is easier than global link prediction because it ranks only among the small set of ATT\&CK-like technique nodes. This makes it closer to the analyst-facing question, ``given this process, which technique is most plausible?'', but it should not be compared directly with global MRR. A high technique-tail score means the model can often distinguish among the four technique labels, not that it can solve all missing-link tasks in the graph.
 
 \section{Addressing Learning Outcomes (LO1--LO12)}
+\textbf{LO1 (Knowledge Graph Embeddings):} The project trains and compares TransE and ComplEx. It shows that different KGE assumptions matter: TransE was more effective for this simple rule-generated pattern, while ComplEx did not perform well under the same budget.
 
-\textbf{LO1 (Knowledge Graph Embeddings):} TransE represents relations as translations in embedding space; ComplEx uses complex-valued embeddings and can represent more varied relational patterns. The experiment compares them through the same held-out link prediction task. While ComplEx has the capacity for more complex patterns, TransE was more easily optimized within the limited training budget of 80 epochs on this relatively simple graph.
+\textbf{LO2 (Logical knowledge in KGs):} The \texttt{has\_family} to \texttt{suggests\_technique} rule is explicit, inspectable and separate from model training. This demonstrates how symbolic knowledge can add provenance-aware facts before ML is applied.
 
-\textbf{LO2 (Logical knowledge in KGs):} The rule mapping \texttt{has\_family} to \texttt{suggests\_technique} is explicit, inspectable and separate from training. This shows why a symbolic layer can produce provenance-aware facts. The code does not implement full recursive or existential Datalog reasoning, but it demonstrates the integration of simple deductive logic into a KG pipeline.
+\textbf{LO3 (Graph Neural Networks):} A GNN is not implemented, but the graph structure could support one. A future GNN could pass messages over \texttt{runs}, \texttt{executed\_by}, \texttt{accesses} and \texttt{connects\_to} edges before predicting \texttt{suggests\_technique} links.
 
-\textbf{LO3 (Graph Neural Networks):} While not explicitly implemented in this baseline feasibility study, GNNs could serve as a powerful alternative to translational KGEs. By message-passing over the observed \texttt{runs} or \texttt{connects\_to} subgraph structure, a GNN might directly capture structural neighborhoods before predicting \texttt{suggests\_technique} edges.
+\textbf{LO4 (KG Data Models):} The generator resembles a property graph because security objects are typed entities connected by labelled edges. PyKEEN consumes the same content as labelled triples, similar to an RDF-style statement view.
 
-\textbf{LO4 (KG Data Models):} The generator naturally resembles a property graph because log events are typed entities with labelled edges. PyKEEN consumes three-column labelled triples, which resembles an RDF-style statement view. This is a modelling choice, not proof that either model is universally better.
+\textbf{LO5 (KG Architectures):} The architecture is modular: generation, rule derivation, triple storage, embedding training, evaluation and ranked output are separated. This mirrors the way a real KG system would keep raw telemetry, symbolic rules and ML services as distinct components.
 
-\textbf{LO5 (KG Architectures):} The architecture is modular: ingestion/generation $\rightarrow$ rule engine $\rightarrow$ triple store $\rightarrow$ KGE training/evaluation $\rightarrow$ ranked analyst output. In a real system, raw telemetry would live outside the embedding model and only selected, versioned KG facts would be embedded.
+\textbf{LO6 (Scalable Reasoning):} The rule engine performs deterministic reasoning, while the KGE performs approximate completion by ranking plausible missing links. The project therefore shows two different reasoning styles in one pipeline.
 
-\textbf{LO6 (Scalable Reasoning):} The KGE serves as approximate KG completion by ranking missing links. The rule engine serves as deterministic reasoning. These are different forms of inference and should not be conflated.
+\textbf{LO7 (KG Creation):} The data generator creates a reproducible KG from a defined schema of users, hosts, processes, files, families and roles. This mimics schema mapping and entity standardisation on a small synthetic dataset.
 
-\textbf{LO7 (KG Creation):} The knowledge graph was created via an ingestion pipeline that generated a schema of typed entities from pseudonymous logs, mimicking record linkage and schema mapping by standardizing edge types like \texttt{executed\_by}.
+\textbf{LO8 (KG Evolution):} Link prediction represents KG completion: a missing \texttt{suggests\_technique} edge can be proposed as a new hypothesis for the graph. The result should be treated as a candidate update, not as confirmed truth.
 
-\textbf{LO8 (KG Evolution):} The KGE pipeline represents Knowledge Graph completion (adding to it via link prediction). Predicting a missing \texttt{suggests\_technique} link evolves the graph with new probable hypotheses. 
+\textbf{LO9 (Real-world Applications):} A realistic SOC use case would present ranked technique hypotheses to analysts, together with provenance and supporting evidence. Human review remains necessary because KGE scores are not calibrated risk values.
 
-\textbf{LO9 (Real-world Applications):} A SOC analyst could review a ranked list of candidate technique links alongside the rule provenance and raw evidence. Human review is necessary because KGE scores are not calibrated security risk values.
+\textbf{LO10 (Financial KG Applications):} The implemented data are security-focused, but the architecture is relevant to financial institutions because banks also need to connect infrastructure, users, entities, regulations and risks. Similar KG completion ideas could support hidden-relationship discovery in ownership, compliance or cyber-risk graphs.
 
-\textbf{LO10 (Financial KG Applications):} While this dataset simulates IT security events (which are highly relevant to banks protecting infrastructure from hostile attacks), in financial institutions, knowledge graphs also map company ownership and regulatory constraints. Similar link prediction could help uncover hidden relations in hostile takeover scenarios.
+\textbf{LO11 (KG Services):} The ranked prediction output is a small KG service: it answers a structured query about likely techniques for a process. In a fuller system, this could become an analyst dashboard, query interface or recommender component.
 
-\textbf{LO11 (KG Services):} The ranked technique-tail metrics simulate a query interface for analysts: "Which ATT\&CK techniques are most likely given this process?" By retrieving these lists, the KG provides an analytical service powered by deep KGE-based knowledge.
-
-\textbf{LO12 (Connections between KGs, ML and AI):} The project demonstrates a hybrid AI design: deductive logic creates transparent facts, while ML generalises patterns in the graph. Neither component alone makes the system a complete AI-based security product, but their combination forms a "melting pot" characteristic of modern KG-AI architectures.
+\textbf{LO12 (Connections between KGs, ML and AI):} The project combines symbolic rules, graph data modelling and neural embedding models. This illustrates how KGs connect database-style structure, logical reasoning and ML-based generalisation.
 
 \section{Limitations}
 \begin{enumerate}
     \item The data are synthetic and intentionally regular, so results cannot be generalised to real APT detection.
+    \item The target technique links are derived from a deterministic family-to-technique rule. The experiment evaluates whether a KGE can recover a structured, rule-generated pattern; it does not prove detection of independently labelled attacks.
     \item The random triple split is appropriate for a teaching KGE benchmark but can leak temporal information in a log setting. A real extension needs a chronological split.
-    \item Ranking metrics test the ability to recover withheld triples, not alert precision/recall on independently labelled incidents.
+    \item Ranking metrics test recovery of withheld triples, not alert precision, recall, analyst workload or business risk.
     \item The rules are intentionally simple and do not cover MITRE ATT\&CK in full.
-    \item The target technique links are derived from a deterministic family-to-technique rule. Consequently, the experiment evaluates whether a KGE can recover a structured, rule-generated pattern from the rest of the graph; it does not show that the model detects independently labelled APT activity.
-    \item Hyperparameters are small and illustrative; no comprehensive HPO was run.
+    \item Hyperparameter exploration is limited. The 200-epoch validation run and 16-dimensional validation run suggest that the current final test configuration may not be the best possible configuration.
+    \item ComplEx was tested under a limited budget. A stronger conclusion about ComplEx would require additional tuning, repeated seeds and possibly longer training.
 \end{enumerate}
 
-\section{Safe Next Extension}
-Replace \texttt{generate\_base\_triples()} with a converter for a small, documented window of one data source. Keep stable pseudonymous identifiers, add timestamp handling separately, create a chronological split, and retain the exact rule set and configuration used for each run.
+\section{How the Work Could Be Expanded}
+The most immediate expansion is to run a final test evaluation for the best validation-selected configuration, especially TransE with 200 epochs and dimension 32, or TransE with 80 epochs and dimension 16 depending on the chosen selection criterion. This would make the model-selection story more consistent.
+
+A second expansion is to use chronological evaluation. Instead of randomly hiding triples, the graph could be split by time so that training uses earlier events and testing uses later events. This would better reflect the operational question of whether a KG can help anticipate or complete future knowledge.
+
+A third expansion is to improve labels. The current \texttt{suggests\_technique} targets are rule-derived, so the model is partly learning to recover the rule pattern. Future work should introduce independently sourced labels or carefully documented analyst annotations. The rule-derived facts should remain useful, but they should be treated as evidence rather than as the only ground truth.
+
+A fourth expansion is to compare additional reasoning methods. A rule-only baseline could show what is already explained by deterministic logic, while KGE and GNN models could show whether learned representations add useful generalisation. More advanced logical rules could include recursion, richer provenance and temporal conditions.
+
+Finally, the service layer could be expanded into a small analyst-facing interface. Instead of reporting only CSV metrics, the system could display the top-ranked technique hypotheses for a process, the rule provenance, neighbouring KG facts and a warning that scores are rankings rather than probabilities.
+
+\section{Conclusion}
+The project demonstrates a small but coherent hybrid Knowledge Graph pipeline. TransE performed substantially better than ComplEx in the fair 80-epoch comparison, longer TransE training improved validation performance, and compact embeddings were sufficient for this small regular graph. The available final test run supports the feasibility of recovering hidden graph links, but the conclusions must remain cautious because the data are synthetic and the target labels are rule-derived. The strongest contribution is therefore methodological: the project shows how symbolic KG construction, logical rules and KGE-based link prediction can be connected, evaluated and extended in a controlled setting.
 
 \end{document}
