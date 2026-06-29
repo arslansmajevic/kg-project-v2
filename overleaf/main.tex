@@ -27,6 +27,14 @@ The dataset is a deterministic synthetic enterprise-security knowledge graph wit
 
 The graph labels are semantically grounded in MITRE ATT\&CK technique identifiers, but the events and labels are generated locally rather than collected from real incidents. Therefore, the results measure link-prediction behaviour on a controlled teaching graph, not real-world attack-detection performance.
 
+\subsection{Initial Approach: Why a Synthetic Dataset}
+
+The original project plan was to use the full LANL ``Comprehensive, Multi-Source Cyber-Security Events'' dataset from \url{https://lanl.ma.ic.ac.uk/data/cyber1/}, which contains authentication events (auth.txt), process start/stop events (proc.txt), network flows (flows.txt), DNS lookups (dns.txt) and ground-truth red-team event labels (redteam.txt). The motivation was clear: build a hybrid reasoning system that combines symbolic Datalog rules (encoding MITRE ATT\&CK frameworks, cyber-kill-chain patterns and recursive lateral-movement detection) with Knowledge Graph Embeddings, then evaluate both on real security data.
+
+However, this ambition encountered a practical bottleneck. The full LANL dataset exceeded 60 gigabytes. Processing at this scale on available hardware led to intractable runtimes even after attempting to filter and compress the data. Attempts to perform processing on Google Colab also did not yield conclusive results, with jobs timing out or completing without actionable insights. An experimental repository was created to document this effort (\url{https://github.com/arslansmajevic/knowledge-graphs-project}), but the sheer volume and complexity made it difficult to debug and steer toward a working pipeline.
+
+As a result, this project took a recovery path: design a small, reproducible, and comprehensible synthetic dataset that demonstrates the same hybrid architecture and learning-outcome coverage as the LANL effort, but at a tractable scale. The synthetic dataset substitutes rule-derived technique labels for real red-team labels, making it suitable for a feasibility study rather than an operational detector. This approach allows the project to remain pedagogically sound and evaluable within the given timeframe.
+
 \subsection{Graph Construction}
 The graph contains users, workstations, servers, processes, file kinds, process families, security roles and ATT\&CK-like technique nodes. Observed facts include \texttt{authenticates\_to}, \texttt{runs}, \texttt{executed\_by}, \texttt{has\_family}, \texttt{accesses}, \texttt{connects\_to} and \texttt{has\_role}. A deterministic Datalog-style rule derives \texttt{suggests\_technique} triples from process-family evidence:
 
@@ -174,13 +182,14 @@ The type-constrained technique-tail metric is easier than global link prediction
 
 \section{Limitations}
 \begin{enumerate}
-    \item The data are synthetic and intentionally regular, so results cannot be generalised to real APT detection.
+    \item The data are synthetic and intentionally regular, so results cannot be generalised to real APT detection. The project is explicitly a feasibility study on a controlled teaching graph.
     \item The target technique links are derived from a deterministic family-to-technique rule. The experiment evaluates whether a KGE can recover a structured, rule-generated pattern; it does not prove detection of independently labelled attacks.
-    \item The random triple split is appropriate for a teaching KGE benchmark but can leak temporal information in a log setting. A real extension needs a chronological split.
+    \item Unlike a real security deployment, the random triple split is appropriate for a teaching KGE benchmark but can leak temporal information in a log setting. A chronological split would better reflect operational reasoning over time.
     \item Ranking metrics test recovery of withheld triples, not alert precision, recall, analyst workload or business risk.
     \item The rules are intentionally simple and do not cover MITRE ATT\&CK in full.
     \item Hyperparameter exploration is limited. The 200-epoch validation run and 16-dimensional validation run suggest that the current final test configuration may not be the best possible configuration.
     \item ComplEx was tested under a limited budget. A stronger conclusion about ComplEx would require additional tuning, repeated seeds and possibly longer training.
+    \item This project is a recovery from a larger initiative. The original goal was to use the 60~GB LANL cyber-security dataset with full recursive Datalog reasoning and a hybrid KGE-logic detector. That effort proved infeasible due to data scale and processing complexity. The current synthetic-dataset approach demonstrates the core architecture and learning outcomes at a tractable scale, but it sacrifices realism.
 \end{enumerate}
 
 \section{How the Work Could Be Expanded}
@@ -191,6 +200,8 @@ A second expansion is to use chronological evaluation. Instead of randomly hidin
 A third expansion is to improve labels. The current \texttt{suggests\_technique} targets are rule-derived, so the model is partly learning to recover the rule pattern. Future work should introduce independently sourced labels or carefully documented analyst annotations. The rule-derived facts should remain useful, but they should be treated as evidence rather than as the only ground truth.
 
 A fourth expansion is to compare additional reasoning methods. A rule-only baseline could show what is already explained by deterministic logic, while KGE and GNN models could show whether learned representations add useful generalisation. More advanced logical rules could include recursion, richer provenance and temporal conditions.
+
+A more ambitious expansion would be to revisit the original LANL dataset goal. The 60~GB LANL cyber-security logs remain a valuable target, but they require careful engineering: data streaming and sampling strategies, distributed processing pipelines, or cloud infrastructure with GPU support. A renewed attempt would benefit from this project's lessons: start small, separate symbolic and embedding reasoning, make provenance explicit, and design evaluation carefully. The original idea of a hybrid detector that combines Datalog-based lateral-movement chains with KGE-based anomaly scores remains compelling.
 
 Finally, the service layer could be expanded into a small analyst-facing interface. Instead of reporting only CSV metrics, the system could display the top-ranked technique hypotheses for a process, the rule provenance, neighbouring KG facts and a warning that scores are rankings rather than probabilities.
 
