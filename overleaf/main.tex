@@ -77,7 +77,7 @@ The second set of runs kept the selected model, split seed, model seed and embed
 \caption{Validation results for TransE with dimension 32 and different epoch counts.}
 \end{table}
 
-The validation results improved as the training budget increased from 20 to 80 to 200 epochs. This suggests that the 20-epoch model was under-trained and that the 80-epoch model had not fully converged. The stronger 200-epoch score means that, if the report is finalized strictly from validation selection, a final test run for the 200-epoch configuration would be the most consistent next step. The existing final test result for 80 epochs is still useful as a baseline, but it should not be described as the best possible TransE configuration after seeing the later validation runs.
+The validation results improved as the training budget increased from 20 to 80 to 200 epochs. This suggests that the 20-epoch model was under-trained and that the 80-epoch model had not fully converged. The stronger 200-epoch score means that, if the final model is selected strictly based on validation performance, a final test run for the 200-epoch configuration would be the most consistent next step. The existing final test result for 80 epochs is still useful as a baseline, but it should not be described as the best possible TransE configuration after seeing the later validation runs.
 
 \subsection{Run C: Embedding-Dimension Sensitivity}
 The third set of runs kept TransE and 80 epochs fixed, while changing the embedding dimension.
@@ -184,7 +184,7 @@ The type-constrained technique-tail metric is easier than global link prediction
 \end{enumerate}
 
 \section{How the Work Could Be Expanded}
-The most immediate expansion is to run a final test evaluation for the best validation-selected configuration, especially TransE with 200 epochs and dimension 32, or TransE with 80 epochs and dimension 16 depending on the chosen selection criterion. This would make the model-selection story more consistent.
+The most immediate expansion is to run a final test evaluation for the strongest validation-tested configuration. Based on the current runs, that is TransE with 200 epochs and dimension 32. TransE with 80 epochs and dimension 16 is also worth noting because it was the best 80-epoch dimension run, but the project has not yet tested the combined setting of 200 epochs and dimension 16. This would make the model-selection story more consistent without implying that untested combinations have already been evaluated.
 
 A second expansion is to use chronological evaluation. Instead of randomly hiding triples, the graph could be split by time so that training uses earlier events and testing uses later events. This would better reflect the operational question of whether a KG can help anticipate or complete future knowledge.
 
