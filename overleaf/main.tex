@@ -189,7 +189,7 @@ The type-constrained technique-tail metric is easier than global link prediction
     \item The rules are intentionally simple and do not cover MITRE ATT\&CK in full.
     \item Hyperparameter exploration is limited. The 200-epoch validation run and 16-dimensional validation run suggest that the current final test configuration may not be the best possible configuration.
     \item ComplEx was tested under a limited budget. A stronger conclusion about ComplEx would require additional tuning, repeated seeds and possibly longer training.
-    \item This project is a recovery from a larger initiative. The original goal was to use the 60~GB LANL cyber-security dataset with full recursive Datalog reasoning and a hybrid KGE-logic detector. That effort proved infeasible due to data scale and processing complexity. The current synthetic-dataset approach demonstrates the core architecture and learning outcomes at a tractable scale, but it sacrifices realism.
+    \item This project is a recovery from a larger initiative. The initial goal was to use the full LANL cyber-security dataset (see Section ``Initial Approach: Why a Synthetic Dataset''), but the 60~GB volume and processing complexity made it infeasible. The synthetic-dataset approach demonstrates the core architecture and learning outcomes at a tractable scale.
 \end{enumerate}
 
 \section{How the Work Could Be Expanded}
